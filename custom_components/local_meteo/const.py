@@ -13,11 +13,18 @@ UPDATE_INTERVAL = 300  # 5 minuti
 
 # Sensori disponibili
 SENSOR_TYPES = {
-    "temperature": "Temperatura",
-    "humidity": "Umidità",
-    "wind_speed": "Velocità vento",
-    "wind_direction": "Direzione vento",
-    "rain": "Pioggia",
-    "rain_radar": "Pioggia istantanea",
-    "sky": "Condizione cielo"
+    "temperature":          "Temperatura",
+    "humidity":             "Umidità",
+    "apparent_temperature": "Temperatura percepita",
+    "dew_point":            "Punto di rugiada",
+    "pressure":             "Pressione",
+    "wind_speed":           "Velocità vento",
+    "wind_direction":       "Direzione vento",
+    "wind_gusts":           "Raffiche vento",
+    "rain":                 "Pioggia",
+    "rain_radar":           "Pioggia istantanea",
+    "uv_index":             "Indice UV",
+    "visibility":           "Visibilità",
+    "cloudcover":           "Copertura nuvolosa",
+    "sky":                  "Condizione cielo",
 }
