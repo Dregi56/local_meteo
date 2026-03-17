@@ -1,13 +1,9 @@
 import logging
 from datetime import timedelta
-
-import requests
+import aiohttp
 import xml.etree.ElementTree as ET
-import xarray as xr
-
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.core import HomeAssistant
-
 from .const import DOMAIN, UPDATE_INTERVAL, CONF_LATITUDE, CONF_LONGITUDE
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,10 +13,8 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
     """Coordinator per gestione dati meteo multi-sorgente."""
 
     def __init__(self, hass: HomeAssistant, entry):
-        self.hass = hass
         self.lat = entry.data[CONF_LATITUDE]
         self.lon = entry.data[CONF_LONGITUDE]
-
         super().__init__(
             hass,
             _LOGGER,
@@ -32,13 +26,12 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
         """Aggiorna tutti i dati meteo."""
         data = {}
 
-        # === DPC (pioggia radar) ===
+        # === Open-Meteo (dati attuali + forecast + pioggia) ===
         try:
-            sri = await self.hass.async_add_executor_job(self._fetch_dpc)
-            data["rain_radar"] = sri
+            openmeteo = await self._fetch_openmeteo()
+            data.update(openmeteo)
         except Exception as e:
-            _LOGGER.warning("Errore DPC: %s", e)
-            data["rain_radar"] = None
+            _LOGGER.warning("Errore Open-Meteo: %s", e)
 
         # === ARPAV (stazione reale) ===
         try:
@@ -47,132 +40,86 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
         except Exception as e:
             _LOGGER.warning("Errore ARPAV: %s", e)
 
-        # === Open-Meteo (fallback + forecast) ===
-        try:
-            openmeteo = await self.hass.async_add_executor_job(self._fetch_openmeteo)
-            data["forecast"] = openmeteo
-        except Exception as e:
-            _LOGGER.warning("Errore Open-Meteo: %s", e)
-
         # === Calcolo condizione cielo ===
         data["sky"] = self._compute_sky(data)
 
         return data
 
     # =========================
-    # 🔹 DPC radar
+    # Open-Meteo (async nativo)
     # =========================
-    def _fetch_dpc(self):
-        url = "https://dati.protezionecivile.gov.it/radar/SRI/latest.nc"
-        r = requests.get(url, timeout=10)
-        with open("/tmp/latest.nc", "wb") as f:
-            f.write(r.content)
+    async def _fetch_openmeteo(self):
+        """Scarica dati attuali, previsioni e precipitazioni da Open-Meteo."""
+        url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={self.lat}&longitude={self.lon}"
+            f"&current=temperature_2m,relative_humidity_2m,"
+            f"precipitation,cloud_cover,wind_speed_10m,wind_direction_10m"
+            f"&forecast_days=1"
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                resp.raise_for_status()
+                raw = await resp.json()
 
-        ds = xr.open_dataset("/tmp/latest.nc")
-        sri = ds.sel(latitude=self.lat, longitude=self.lon, method="nearest")["SRI"].values.item()
-        return float(sri)
+        current = raw.get("current", {})
+        return {
+            "temperature":     current.get("temperature_2m"),
+            "humidity":        current.get("relative_humidity_2m"),
+            "rain":            current.get("precipitation", 0),
+            "cloudcover":      current.get("cloud_cover"),
+            "wind_speed":      current.get("wind_speed_10m"),
+            "wind_direction":  current.get("wind_direction_10m"),
+        }
 
     # =========================
-    # 🔹 ARPAV
+    # ARPAV (sincrono in executor)
     # =========================
     def _fetch_arpav(self):
+        """Recupera dati dalla stazione ARPAV più vicina."""
+        import requests
+
         url_stazioni = "https://tele.arpav.it/meteoidro/xml/stazioni.xml"
         r = requests.get(url_stazioni, timeout=10)
         root = ET.fromstring(r.content)
 
         closest_station = None
         min_dist = float("inf")
-
         for stazione in root.findall("stazione"):
-            st_lat = float(stazione.find("latitudine").text)
-            st_lon = float(stazione.find("longitudine").text)
-            dist = (self.lat - st_lat) ** 2 + (self.lon - st_lon) ** 2
-            if dist < min_dist:
-                min_dist = dist
-                closest_station = stazione
+            try:
+                st_lat = float(stazione.find("latitudine").text)
+                st_lon = float(stazione.find("longitudine").text)
+                dist = (self.lat - st_lat) ** 2 + (self.lon - st_lon) ** 2
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_station = stazione
+            except (TypeError, ValueError):
+                continue
+
+        if closest_station is None:
+            _LOGGER.warning("ARPAV: nessuna stazione trovata")
+            return {}
 
         st_id = closest_station.find("id").text
         url_data = f"https://tele.arpav.it/meteoidro/xml/{st_id}.xml"
-
         r = requests.get(url_data, timeout=10)
         data_root = ET.fromstring(r.content)
 
-        return {
-            "temperature": float(data_root.find("temperatura").text),
-            "humidity": float(data_root.find("umidita").text),
-            "wind_speed": float(data_root.find("vento_vel").text),
-            "wind_direction": float(data_root.find("vento_dir").text),
-            "rain": float(data_root.find("precipitazioni").text),
+        result = {}
+        mapping = {
+            "temperature":   "temperatura",
+            "humidity":      "umidita",
+            "wind_speed":    "vento_vel",
+            "wind_direction":"vento_dir",
+            "rain":          "precipitazioni",
         }
+        for key, tag in mapping.items():
+            node = data_root.find(tag)
+            if node is not None and node.text:
+                try:
+                    result[key] = float(node.text)
+                except ValueError:
+                    pass
+        return result
 
-    # =========================
-    # 🔹 Open-Meteo
-    # =========================
-    def _fetch_openmeteo(self):
-    """
-    Scarica i dati Open-Meteo per forecast e parametri utili.
-    Include cloudcover per calcolo condizione cielo.
-    """
-    url = (
-        f"https://api.open-meteo.com/v1/forecast?"
-        f"latitude={self.lat}&longitude={self.lon}"
-        f"&current_weather=true"
-        f"&hourly=cloudcover"
-    )
-
-    r = requests.get(url, timeout=10)
-    data = r.json()
-
-    # Dati attuali (current_weather)
-    current = data.get("current_weather", {})
-
-    # Cloudcover orario più vicino
-    cloudcover = None
-    hourly = data.get("hourly", {})
-    if "cloudcover" in hourly and len(hourly["cloudcover"]) > 0:
-        cloudcover = hourly["cloudcover"][0]  # primo valore disponibile
-
-    # Costruiamo il dict dei dati da salvare
-    result = {
-        "temperature": current.get("temperature"),
-        "wind_speed": current.get("windspeed"),
-        "wind_direction": current.get("winddirection"),
-        "cloudcover": cloudcover,
-    }
-
-    return result
-
-    # =========================
-    # 🔹 Sky condition
-    # =========================
-    def _compute_sky(self, data):
-    """Calcola la condizione del cielo in base a pioggia e copertura nuvolosa."""
-    
-    # Dati disponibili
-    rain = data.get("rain_radar") or data.get("rain") or 0
-    cloudcover = None
-
-    # Prova a leggere cloudcover da Open-Meteo
-    forecast = data.get("forecast", {})
-    if forecast:
-        cloudcover = forecast.get("cloudcover", None)
-
-    # Condizioni basate sulla pioggia
-    if rain > 5:
-        return "temporale"
-    elif rain > 0:
-        return "pioggia leggera"
-    
-    # Se non piove, valutiamo la copertura nuvolosa
-    if cloudcover is not None:
-        if cloudcover < 20:
-            return "sereno"
-        elif cloudcover < 50:
-            return "poco nuvoloso"
-        else:
-            return "nuvoloso"
-    
-    # Fallback se non abbiamo cloudcover
-    return "sereno"
-        else:
-            return "temporale"
+    # ==================
