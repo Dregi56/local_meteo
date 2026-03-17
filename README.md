@@ -48,7 +48,7 @@
 
 ## ⏱️ Aggiornamento dati
 
-- La pipeline aggiorna tutti i sensori ogni **5 minuti**  
+- L'integrazione aggiorna tutti i sensori ogni **5 minuti**  
 - La pioggia istantanea (radar DPC) è il dato più realistico per automazioni in tempo reale  
 - Le altre grandezze (temperatura, vento, umidità) vengono aggiornate dalla stazione più vicina e dai dati forecast come fallback.
 
