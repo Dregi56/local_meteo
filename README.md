@@ -1,7 +1,5 @@
 # 🌦️ Local Meteo
 
-# Local_Meteo - Integrazione Home Assistant
-
 **Local_Meteo** è un’integrazione per **Home Assistant** che raccoglie dati meteo in tempo reale da diverse fonti e li rende disponibili come sensori unici. L’integrazione è progettata per l’Italia, con aggiornamento rapido e sensori affidabili.
 
 ---
