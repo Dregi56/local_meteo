@@ -64,12 +64,12 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
 
         current = raw.get("current", {})
         return {
-            "temperature":     current.get("temperature_2m"),
-            "humidity":        current.get("relative_humidity_2m"),
-            "rain":            current.get("precipitation", 0),
-            "cloudcover":      current.get("cloud_cover"),
-            "wind_speed":      current.get("wind_speed_10m"),
-            "wind_direction":  current.get("wind_direction_10m"),
+            "temperature":    current.get("temperature_2m"),
+            "humidity":       current.get("relative_humidity_2m"),
+            "rain":           current.get("precipitation", 0),
+            "cloudcover":     current.get("cloud_cover"),
+            "wind_speed":     current.get("wind_speed_10m"),
+            "wind_direction": current.get("wind_direction_10m"),
         }
 
     # =========================
@@ -107,11 +107,11 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
 
         result = {}
         mapping = {
-            "temperature":   "temperatura",
-            "humidity":      "umidita",
-            "wind_speed":    "vento_vel",
-            "wind_direction":"vento_dir",
-            "rain":          "precipitazioni",
+            "temperature":    "temperatura",
+            "humidity":       "umidita",
+            "wind_speed":     "vento_vel",
+            "wind_direction": "vento_dir",
+            "rain":           "precipitazioni",
         }
         for key, tag in mapping.items():
             node = data_root.find(tag)
@@ -122,4 +122,25 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
                     pass
         return result
 
-    # ==================
+    # =========================
+    # Sky condition
+    # =========================
+    def _compute_sky(self, data: dict) -> str:
+        """Calcola la condizione del cielo in base a pioggia e copertura nuvolosa."""
+        rain = data.get("rain") or 0
+        cloudcover = data.get("cloudcover")
+
+        if rain > 5:
+            return "temporale"
+        elif rain > 0:
+            return "pioggia leggera"
+
+        if cloudcover is not None:
+            if cloudcover < 20:
+                return "sereno"
+            elif cloudcover < 50:
+                return "poco nuvoloso"
+            else:
+                return "nuvoloso"
+
+        return "sereno"
