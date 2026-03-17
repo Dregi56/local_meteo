@@ -1,4 +1,4 @@
-# Local Meteo
+# 🌦️ Local Meteo
 
 # Local_Meteo - Integrazione Home Assistant
 
