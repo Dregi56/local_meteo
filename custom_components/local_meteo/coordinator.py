@@ -109,16 +109,38 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
     # 🔹 Open-Meteo
     # =========================
     def _fetch_openmeteo(self):
-        url = (
-            f"https://api.open-meteo.com/v1/forecast?"
-            f"latitude={self.lat}&longitude={self.lon}"
-            f"&current=temperature_2m,wind_speed_10m,wind_direction_10m"
-        )
+    """
+    Scarica i dati Open-Meteo per forecast e parametri utili.
+    Include cloudcover per calcolo condizione cielo.
+    """
+    url = (
+        f"https://api.open-meteo.com/v1/forecast?"
+        f"latitude={self.lat}&longitude={self.lon}"
+        f"&current_weather=true"
+        f"&hourly=cloudcover"
+    )
 
-        r = requests.get(url, timeout=10)
-        data = r.json()
+    r = requests.get(url, timeout=10)
+    data = r.json()
 
-        return data.get("current", {})
+    # Dati attuali (current_weather)
+    current = data.get("current_weather", {})
+
+    # Cloudcover orario più vicino
+    cloudcover = None
+    hourly = data.get("hourly", {})
+    if "cloudcover" in hourly and len(hourly["cloudcover"]) > 0:
+        cloudcover = hourly["cloudcover"][0]  # primo valore disponibile
+
+    # Costruiamo il dict dei dati da salvare
+    result = {
+        "temperature": current.get("temperature"),
+        "wind_speed": current.get("windspeed"),
+        "wind_direction": current.get("winddirection"),
+        "cloudcover": cloudcover,
+    }
+
+    return result
 
     # =========================
     # 🔹 Sky condition
