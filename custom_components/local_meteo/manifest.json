@@ -2,7 +2,7 @@
   "domain": "local_meteo",
   "name": "Local Meteo",
   "version": "1.0.0",
-  "documentation": "https://github.com/tuo-username/Local_Meteo",
+  "documentation": "https://github.com/Dregi56/Local_Meteo",
   "requirements": [
     "requests",
     "xarray",
@@ -11,5 +11,6 @@
   "dependencies": [],
   "codeowners": ["@Dregi56"],
   "config_flow": true,
-  "iot_class": "cloud_polling"
+  "iot_class": "cloud_poll",
+  "homeassistant": "2023.4.0"
 }
