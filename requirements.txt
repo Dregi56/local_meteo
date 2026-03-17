@@ -1,0 +1,5 @@
+xarray
+requests
+paho-mqtt
+PyYAML
+netCDF4
