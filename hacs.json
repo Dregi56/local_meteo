@@ -1,0 +1,11 @@
+{
+  "name": "Local Meteo",
+  "content_in_root": false,
+  "domain": "local_meteo",
+  "homeassistant": "2023.4.0",
+  "iot_class": "cloud_poll",
+  "zip_release": false,
+  "release_info": "https://github.com/Dregi56/Local_Meteo/releases/tag/1.0.0",
+  "version": "1.0.0",
+  "hacs": "integration"
+}
