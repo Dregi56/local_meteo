@@ -1,0 +1,15 @@
+{
+  "domain": "local_meteo",
+  "name": "Local Meteo",
+  "version": "1.0.0",
+  "documentation": "https://github.com/tuo-username/Local_Meteo",
+  "requirements": [
+    "requests",
+    "xarray",
+    "netCDF4"
+  ],
+  "dependencies": [],
+  "codeowners": ["@Dregi56"],
+  "config_flow": true,
+  "iot_class": "cloud_polling"
+}
