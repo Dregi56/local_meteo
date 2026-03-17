@@ -18,5 +18,6 @@ SENSOR_TYPES = {
     "wind_speed": "Velocità vento",
     "wind_direction": "Direzione vento",
     "rain": "Pioggia",
+    "rain_radar": "Pioggia radar",
     "sky": "Condizione cielo"
 }
