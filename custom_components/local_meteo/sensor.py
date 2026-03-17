@@ -1,18 +1,16 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
 from .const import DOMAIN, SENSOR_TYPES
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup sensori."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    sensors = []
-    for sensor_type in SENSOR_TYPES:
-        sensors.append(LocalMeteoSensor(coordinator, entry, sensor_type))
-
+    sensors = [
+        LocalMeteoSensor(coordinator, entry, sensor_type)
+        for sensor_type in SENSOR_TYPES
+    ]
     async_add_entities(sensors)
 
 
@@ -46,12 +44,19 @@ class LocalMeteoSensor(CoordinatorEntity, SensorEntity):
     def unit_of_measurement(self):
         """Unità di misura."""
         units = {
-            "temperature": "°C",
-            "humidity": "%",
-            "wind_speed": "km/h",
-            "wind_direction": "°",
-            "rain": "mm",
-            "rain_radar": "mm/h",
+            "temperature":          "°C",
+            "humidity":             "%",
+            "apparent_temperature": "°C",
+            "dew_point":            "°C",
+            "pressure":             "hPa",
+            "wind_speed":           "km/h",
+            "wind_direction":       "°",
+            "wind_gusts":           "km/h",
+            "rain":                 "mm",
+            "rain_radar":           "mm/h",
+            "uv_index":             "UV",
+            "visibility":           "m",
+            "cloudcover":           "%",
         }
         return units.get(self._sensor_type)
 
@@ -59,12 +64,19 @@ class LocalMeteoSensor(CoordinatorEntity, SensorEntity):
     def icon(self):
         """Icona sensore."""
         icons = {
-            "temperature": "mdi:thermometer",
-            "humidity": "mdi:water-percent",
-            "wind_speed": "mdi:weather-windy",
-            "wind_direction": "mdi:compass",
-            "rain": "mdi:weather-rainy",
-            "rain_radar": "mdi:radar",
-            "sky": "mdi:weather-partly-cloudy",
+            "temperature":          "mdi:thermometer",
+            "humidity":             "mdi:water-percent",
+            "apparent_temperature": "mdi:thermometer-lines",
+            "dew_point":            "mdi:thermometer-water",
+            "pressure":             "mdi:gauge",
+            "wind_speed":           "mdi:weather-windy",
+            "wind_direction":       "mdi:compass",
+            "wind_gusts":           "mdi:weather-windy-variant",
+            "rain":                 "mdi:weather-rainy",
+            "rain_radar":           "mdi:radar",
+            "uv_index":             "mdi:sun-wireless",
+            "visibility":           "mdi:eye",
+            "cloudcover":           "mdi:cloud",
+            "sky":                  "mdi:weather-partly-cloudy",
         }
         return icons.get(self._sensor_type)
