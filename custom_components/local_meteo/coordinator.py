@@ -124,13 +124,33 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
     # 🔹 Sky condition
     # =========================
     def _compute_sky(self, data):
-        rain = data.get("rain_radar") or data.get("rain") or 0
+    """Calcola la condizione del cielo in base a pioggia e copertura nuvolosa."""
+    
+    # Dati disponibili
+    rain = data.get("rain_radar") or data.get("rain") or 0
+    cloudcover = None
 
-        if rain == 0:
+    # Prova a leggere cloudcover da Open-Meteo
+    forecast = data.get("forecast", {})
+    if forecast:
+        cloudcover = forecast.get("cloudcover", None)
+
+    # Condizioni basate sulla pioggia
+    if rain > 5:
+        return "temporale"
+    elif rain > 0:
+        return "pioggia leggera"
+    
+    # Se non piove, valutiamo la copertura nuvolosa
+    if cloudcover is not None:
+        if cloudcover < 20:
             return "sereno"
-        elif rain <= 1:
+        elif cloudcover < 50:
+            return "poco nuvoloso"
+        else:
             return "nuvoloso"
-        elif rain <= 5:
-            return "pioggia moderata"
+    
+    # Fallback se non abbiamo cloudcover
+    return "sereno"
         else:
             return "temporale"
