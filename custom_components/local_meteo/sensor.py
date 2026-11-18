@@ -18,11 +18,12 @@ class LocalMeteoSensor(CoordinatorEntity, SensorEntity):
     """Sensore generico Local Meteo."""
 
     def __init__(self, coordinator, entry, sensor_type):
-        super().__init__(coordinator)
-        self._entry = entry
-        self._sensor_type = sensor_type
-        self._attr_name = f"{entry.data.get('name', 'Local Meteo')} {SENSOR_TYPES[sensor_type]}"
-        self._attr_unique_id = f"{entry.entry_id}_{sensor_type}"
+       super().__init__(coordinator)
+       self._entry = entry
+       self._sensor_type = sensor_type
+       self._base_name = entry.data.get("city") or entry.data.get("name") or "Local Meteo"
+       self._attr_name = f"{self._base_name} {SENSOR_TYPES[sensor_type]}"
+       self._attr_unique_id = f"{entry.entry_id}_{sensor_type}"
 
     @property
     def device_info(self):
