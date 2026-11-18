@@ -30,7 +30,7 @@ class LocalMeteoSensor(CoordinatorEntity, SensorEntity):
         """Info dispositivo."""
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry.entry_id)},
-            name=self._entry.data.get("name", "Local Meteo"),
+            name=self._base_name,
             manufacturer="Local Meteo",
             model="Multi-source weather",
         )
