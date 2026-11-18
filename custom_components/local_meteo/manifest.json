@@ -1,9 +1,9 @@
 {
   "domain": "local_meteo",
   "name": "Local Meteo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "documentation": "https://github.com/Dregi56/Local_Meteo",
-  "requirements": ["requests"],
+  "requirements": [],
   "dependencies": [],
   "codeowners": ["@Dregi56"],
   "config_flow": true,
