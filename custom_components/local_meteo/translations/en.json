@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Local Meteo",
+        "description": "Enter a city name, or leave it empty and provide coordinates.",
+        "data": {
+          "city": "City / Town",
+          "latitude": "Latitude",
+          "longitude": "Longitude"
+        }
+      },
+      "select": {
+        "title": "Choose the location",
+        "data": {
+          "location": "Location"
+        }
+      }
+    },
+    "error": {
+      "city_not_found": "No location found with this name",
+      "cannot_connect": "Unable to reach the geocoding service",
+      "invalid_coordinates": "Invalid coordinates",
+      "city_or_coordinates": "Enter a city or both latitude and longitude"
+    }
+  }
+}
