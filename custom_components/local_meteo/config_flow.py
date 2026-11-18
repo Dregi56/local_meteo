@@ -5,6 +5,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
@@ -15,24 +16,14 @@ CONF_CITY = "city"
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
 
-class LocalMeteoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow Local Meteo con ricerca per nome città."""
+class LocationFlowMixin:
+    """Logica di ricerca città condivisa tra config flow e options flow."""
 
-    VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
+    _results: list
 
-    def __init__(self):
-        self._results = []
-
-    async def _geocode(self, city: str) -> list[dict]:
-        """Cerca la città su Open-Meteo Geocoding e ritorna la lista dei risultati."""
+    async def _geocode(self, city: str) -> list:
         session = async_get_clientsession(self.hass)
-        params = {
-            "name": city,
-            "count": 10,
-            "language": "it",
-            "format": "json",
-        }
+        params = {"name": city, "count": 10, "language": "it", "format": "json"}
         async with session.get(
             GEOCODING_URL, params=params, timeout=aiohttp.ClientTimeout(total=10)
         ) as resp:
@@ -42,70 +33,125 @@ class LocalMeteoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def _label(r: dict) -> str:
-        """Etichetta leggibile: Comune (Provincia, Regione, Paese)."""
         parts = [r.get("admin2"), r.get("admin1"), r.get("country")]
         extra = ", ".join(p for p in parts if p)
         return f"{r['name']} ({extra})" if extra else r["name"]
 
-    def _create(self, r: dict):
-        return self.async_create_entry(
-            title=self._label(r),
-            data={
+    def _entry_from_result(self, r: dict) -> dict:
+        return {
+            "title": self._label(r),
+            "data": {
                 CONF_LATITUDE: r["latitude"],
                 CONF_LONGITUDE: r["longitude"],
                 CONF_CITY: r["name"],
             },
-        )
+        }
 
-    async def async_step_user(self, user_input=None):
-        errors = {}
+    def _home_entry(self) -> dict:
+        return {
+            "title": "Local Meteo",
+            "data": {
+                CONF_LATITUDE: self.hass.config.latitude,
+                CONF_LONGITUDE: self.hass.config.longitude,
+            },
+        }
 
-        if user_input is not None:
-            city = (user_input.get(CONF_CITY) or "").strip()
-
-            if city:
-                try:
-                    self._results = await self._geocode(city)
-                except (aiohttp.ClientError, TimeoutError):
-                    errors["base"] = "cannot_connect"
-                else:
-                    if not self._results:
-                        errors["base"] = "city_not_found"
-                    elif len(self._results) == 1:
-                        return self._create(self._results[0])
-                    else:
-                        return await self.async_step_select()
-            else:
-                # Fallback manuale: città vuota -> coordinate
-                lat = user_input.get(CONF_LATITUDE)
-                lon = user_input.get(CONF_LONGITUDE)
-                if lat is None or lon is None:
-                    errors["base"] = "city_or_coordinates"
-                elif not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
-                    errors["base"] = "invalid_coordinates"
-                else:
-                    return self.async_create_entry(
-                        title="Local Meteo",
-                        data={CONF_LATITUDE: lat, CONF_LONGITUDE: lon},
-                    )
-
-        schema = vol.Schema(
-            {
-                vol.Optional(CONF_CITY): str,
-                vol.Optional(CONF_LATITUDE): float,
-                vol.Optional(CONF_LONGITUDE): float,
-            }
-        )
-        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+    async def _resolve(self, city: str | None):
+        """Ritorna (entry, errore). entry == {} significa: serve scegliere."""
+        city = (city or "").strip()
+        if not city:
+            return self._home_entry(), None
+        try:
+            self._results = await self._geocode(city)
+        except (aiohttp.ClientError, TimeoutError):
+            return None, "cannot_connect"
+        if not self._results:
+            return None, "city_not_found"
+        if len(self._results) == 1:
+            return self._entry_from_result(self._results[0]), None
+        return {}, None
 
     async def async_step_select(self, user_input=None):
-        """Più risultati: l'utente sceglie quello giusto."""
         options = {str(i): self._label(r) for i, r in enumerate(self._results)}
-
         if user_input is not None:
-            return self._create(self._results[int(user_input["location"])])
-
+            entry = self._entry_from_result(self._results[int(user_input["location"])])
+            return self._finish(entry)
         return self.async_show_form(
             step_id="select",
             data_schema=vol.Schema({vol.Required("location"): vol.In(options)}),
+        )
+
+
+class LocalMeteoConfigFlow(LocationFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow Local Meteo."""
+
+    VERSION = 1
+
+    def __init__(self):
+        self._results = []
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return LocalMeteoOptionsFlow()
+
+    def _finish(self, entry: dict):
+        return self.async_create_entry(title=entry["title"], data=entry["data"])
+
+    async def async_step_user(self, user_input=None):
+        errors = {}
+        if user_input is not None:
+            entry, error = await self._resolve(user_input.get(CONF_CITY))
+            if error:
+                errors["base"] = error
+            elif not entry:
+                return await self.async_step_select()
+            else:
+                return self._finish(entry)
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({vol.Optional(CONF_CITY): str}),
+            description_placeholders={
+                "lat": f"{self.hass.config.latitude:.4f}",
+                "lon": f"{self.hass.config.longitude:.4f}",
+            },
+            errors=errors,
+        )
+
+
+class LocalMeteoOptionsFlow(LocationFlowMixin, config_entries.OptionsFlow):
+    """Cambio località dopo l'installazione (pulsante Configura)."""
+
+    def __init__(self):
+        self._results = []
+
+    def _finish(self, entry: dict):
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, title=entry["title"], data=entry["data"]
+        )
+        return self.async_create_entry(title="", data={})
+
+    async def async_step_init(self, user_input=None):
+        errors = {}
+        if user_input is not None:
+            entry, error = await self._resolve(user_input.get(CONF_CITY))
+            if error:
+                errors["base"] = error
+            elif not entry:
+                return await self.async_step_select()
+            else:
+                return self._finish(entry)
+
+        current = self.config_entry.data.get(CONF_CITY)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {vol.Optional(CONF_CITY, description={"suggested_value": current}): str}
+            ),
+            description_placeholders={
+                "lat": f"{self.hass.config.latitude:.4f}",
+                "lon": f"{self.hass.config.longitude:.4f}",
+            },
+            errors=errors,
         )
