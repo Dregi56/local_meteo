@@ -1,10 +1,20 @@
 import logging
 from datetime import timedelta
+
 import aiohttp
-import xml.etree.ElementTree as ET
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, UPDATE_INTERVAL, CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from . import arpav
+from .const import (
+    ARPAV_MAX_KM,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
+    CONF_STATION,
+    DOMAIN,
+    UPDATE_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,6 +25,8 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, entry):
         self.lat = entry.data[CONF_LATITUDE]
         self.lon = entry.data[CONF_LONGITUDE]
+        self.station_id = entry.data.get(CONF_STATION)  # None = automatica
+        self._session = async_get_clientsession(hass)
         super().__init__(
             hass,
             _LOGGER,
@@ -23,33 +35,22 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self):
-        """Aggiorna tutti i dati meteo."""
         data = {}
 
-        # === Open-Meteo (dati attuali + pioggia istantanea) ===
         try:
-            openmeteo = await self._fetch_openmeteo()
-            data.update(openmeteo)
+            data.update(await self._fetch_openmeteo())
         except Exception as e:
             _LOGGER.warning("Errore Open-Meteo: %s", e)
 
-        # === ARPAV (stazione reale) ===
         try:
-            arpav_data = await self.hass.async_add_executor_job(self._fetch_arpav)
-            data.update(arpav_data)
+            data.update(await self._fetch_arpav())
         except Exception as e:
             _LOGGER.warning("Errore ARPAV: %s", e)
 
-        # === Calcolo condizione cielo ===
         data["sky"] = self._compute_sky(data)
-
         return data
 
-    # =========================
-    # Open-Meteo (async nativo)
-    # =========================
     async def _fetch_openmeteo(self):
-        """Scarica dati attuali e pioggia istantanea da Open-Meteo."""
         url = (
             f"https://api.open-meteo.com/v1/forecast"
             f"?latitude={self.lat}&longitude={self.lon}"
@@ -59,16 +60,16 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
             f"&minutely_15=precipitation"
             f"&forecast_days=1"
         )
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                resp.raise_for_status()
-                raw = await resp.json()
+        async with self._session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            resp.raise_for_status()
+            raw = await resp.json()
 
         current = raw.get("current", {})
         minutely = raw.get("minutely_15", {})
-        rain_radar = None
-        if "precipitation" in minutely and len(minutely["precipitation"]) > 0:
-            rain_radar = minutely["precipitation"][0]
+        times = minutely.get("time", [])
+        values = minutely.get("precipitation", [])
+        now = current.get("time")
+        rain_radar = values[times.index(now)] if now in times else None
 
         return {
             "temperature":          current.get("temperature_2m"),
@@ -86,61 +87,31 @@ class LocalMeteoCoordinator(DataUpdateCoordinator):
             "cloudcover":           current.get("cloud_cover"),
         }
 
-    # =========================
-    # ARPAV (sincrono in executor)
-    # =========================
-    def _fetch_arpav(self):
-        """Recupera dati dalla stazione ARPAV più vicina."""
-        import requests
+    async def _fetch_arpav(self):
+        """Dati dalla stazione ARPAV scelta (o dalla più vicina)."""
+        stations = await arpav.async_get_stations(self._session)
 
-        url_stazioni = "https://tele.arpav.it/meteoidro/xml/stazioni.xml"
-        r = requests.get(url_stazioni, timeout=10)
-        root = ET.fromstring(r.content)
+        if self.station_id:
+            station = next((s for s in stations if s["id"] == self.station_id), None)
+        else:
+            nearest = arpav.nearest_stations(stations, self.lat, self.lon, limit=1)
+            station = nearest[0] if nearest else None
+            if station and station["distance_km"] > ARPAV_MAX_KM:
+                _LOGGER.debug(
+                    "ARPAV: stazione più vicina a %.0f km, la ignoro", station["distance_km"]
+                )
+                return {}
 
-        closest_station = None
-        min_dist = float("inf")
-        for stazione in root.findall("stazione"):
-            try:
-                st_lat = float(stazione.find("latitudine").text)
-                st_lon = float(stazione.find("longitudine").text)
-                dist = (self.lat - st_lat) ** 2 + (self.lon - st_lon) ** 2
-                if dist < min_dist:
-                    min_dist = dist
-                    closest_station = stazione
-            except (TypeError, ValueError):
-                continue
-
-        if closest_station is None:
-            _LOGGER.warning("ARPAV: nessuna stazione trovata")
+        if station is None:
+            _LOGGER.warning("ARPAV: stazione non trovata")
             return {}
 
-        st_id = closest_station.find("id").text
-        url_data = f"https://tele.arpav.it/meteoidro/xml/{st_id}.xml"
-        r = requests.get(url_data, timeout=10)
-        data_root = ET.fromstring(r.content)
+        data = await arpav.async_get_station_data(self._session, station["link"])
+        if data:
+            data["arpav_station"] = station["name"]
+        return data
 
-        result = {}
-        mapping = {
-            "temperature":    "temperatura",
-            "humidity":       "umidita",
-            "wind_speed":     "vento_vel",
-            "wind_direction": "vento_dir",
-            "rain":           "precipitazioni",
-        }
-        for key, tag in mapping.items():
-            node = data_root.find(tag)
-            if node is not None and node.text:
-                try:
-                    result[key] = float(node.text)
-                except ValueError:
-                    pass
-        return result
-
-    # =========================
-    # Sky condition
-    # =========================
     def _compute_sky(self, data: dict) -> str:
-        """Calcola la condizione del cielo in base a pioggia e copertura nuvolosa."""
         rain = data.get("rain") or 0
         cloudcover = data.get("cloudcover")
 
