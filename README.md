@@ -1,5 +1,5 @@
 <h1>
-  <img src="https://raw.githubusercontent.com/Dregi56/Local_Meteo/main/custom_components/local_meteo/brand/logo.png" width="72" align="absmiddle" alt="Local Meteo">
+  <img src="https://raw.githubusercontent.com/Dregi56/Local_Meteo/main/custom_components/local_meteo/brand/icon.png" width="72" align="absmiddle" alt="Local Meteo">
   Local Meteo
 </h1>
 
