@@ -35,7 +35,7 @@
 
 <sub>Questo progetto non è affiliato, approvato o sponsorizzato da Open-Meteo né da ARPAV.
 I dati sono forniti "così come sono", senza garanzie su accuratezza o disponibilità.
----
+
 
 
 ## 🛠️ Sensori disponibili
