@@ -33,7 +33,7 @@
 - **Dati delle stazioni meteo**: ARPAV – Agenzia Regionale per la Prevenzione e
   Protezione Ambientale del Veneto ([www.arpa.veneto.it](http://www.arpa.veneto.it)).
 
-Questo progetto non è affiliato, approvato o sponsorizzato da Open-Meteo né da ARPAV.
+<sub>Questo progetto non è affiliato, approvato o sponsorizzato da Open-Meteo né da ARPAV.
 I dati sono forniti "così come sono", senza garanzie su accuratezza o disponibilità.
 ---
 
