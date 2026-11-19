@@ -3,11 +3,12 @@
 
 ---
 
-## ⚡ Fonti dati
+## ⚡ Fonti dati e crediti
+
 | Parametro | Fonte principale | Fallback |
 |-----------|-----------------|----------|
-| Pioggia istantanea | Open-Meteo (minutely 15 min) | — |
-| Pioggia accumulata | ARPAV (stazione più vicina) | Open-Meteo |
+| Pioggia istantanea | [Open-Meteo](https://open-meteo.com/) (minutely 15 min) | — |
+| Pioggia accumulata | [ARPAV](http://www.arpa.veneto.it) (stazione più vicina) | Open-Meteo |
 | Temperatura | ARPAV | Open-Meteo |
 | Umidità | ARPAV | Open-Meteo |
 | Vento | ARPAV | Open-Meteo |
@@ -20,8 +21,20 @@
 | Copertura nuvolosa | Open-Meteo | — |
 | Condizione cielo | `_compute_sky()` → combina pioggia + cloudcover | — |
 
-> Nota: Temperatura, vento e umidità sono **dati locali** presi sempre dalla stazione ARPAV più vicina. Gli altri parametri provengono da Open-Meteo, gratuito e senza API key.
+> **Nota:** temperatura, vento e umidità sono **dati locali** presi dalla stazione ARPAV più vicina. Gli altri parametri provengono da Open-Meteo, gratuito e senza API key.
+>
+> **Copertura ARPAV:** ARPAV è l'agenzia regionale del **Veneto**, quindi i dati delle stazioni sono significativi per località in Veneto o vicine. Per le altre zone i valori provengono principalmente da Open-Meteo.
 
+### 🙏 Crediti
+
+- **Dati meteo e ricerca località**: [Open-Meteo.com](https://open-meteo.com/),
+  licenza [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  *Weather data by [Open-Meteo.com](https://open-meteo.com/).*
+- **Dati delle stazioni meteo**: ARPAV – Agenzia Regionale per la Prevenzione e
+  Protezione Ambientale del Veneto ([www.arpa.veneto.it](http://www.arpa.veneto.it)).
+
+Questo progetto non è affiliato, approvato o sponsorizzato da Open-Meteo né da ARPAV.
+I dati sono forniti "così come sono", senza garanzie su accuratezza o disponibilità.
 ---
 
 ## 🛠️ Sensori disponibili
