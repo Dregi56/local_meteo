@@ -63,14 +63,19 @@ I dati sono forniti "così come sono", senza garanzie su accuratezza o disponibi
 ---
 
 ## ⚙️ Configurazione
+
 1. Vai in **Home Assistant > Impostazioni > Dispositivi e Servizi > Aggiungi integrazione**
 2. Cerca `Local Meteo`
-3. Inserisci:
-   - **Latitudine** (obbligatoria)
-   - **Longitudine** (obbligatoria)
+3. Nella finestra di configurazione hai due possibilità:
+   * **Posizione di Home Assistant (predefinita)**: lascia il campo *Città / Paese* vuoto e conferma. Latitudine e longitudine vengono lette automaticamente dalla posizione di casa impostata in Home Assistant (la finestra te ne mostra i valori).
+   * **Un'altra località**: scrivi il nome della città o del paese. Latitudine e longitudine vengono calcolate in automatico tramite la [Geocoding API di Open-Meteo](https://open-meteo.com/en/docs/geocoding-api).
+4. Se esistono più località con lo stesso nome (ad esempio "San Martino"), ti viene chiesto di scegliere quella corretta da un elenco con comune, provincia e regione.
 
-> L'integrazione legge automaticamente la posizione globale di Home Assistant e propone questi valori come default. È comunque possibile modificarli.
+### Cambiare località
 
+Dopo l'installazione puoi cambiarla da **Impostazioni > Dispositivi e Servizi > Local Meteo > Configura**: inserisci una nuova città, oppure lascia il campo vuoto per tornare alla posizione di casa di Home Assistant. L'integrazione si ricarica da sola.
+
+> **Nota:** la posizione di Home Assistant viene letta al momento del salvataggio della configurazione. Se in seguito la modifichi in Home Assistant, apri **Configura**, lascia il campo vuoto e conferma per aggiornare l'integrazione.
 ---
 
 ## ⏱️ Aggiornamento dati
