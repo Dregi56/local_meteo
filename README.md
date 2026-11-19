@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dregi56/Local_Meteo/main/custom_components/local_meteo/icons/icon.png" alt="Local Meteo" width="128">
+</p>
 # 🌦️ Local Meteo
 **Local Meteo** è un'integrazione per **Home Assistant** che raccoglie dati meteo in tempo reale da diverse fonti e li rende disponibili come sensori unici. L'integrazione è progettata per l'Italia, con aggiornamento rapido e sensori affidabili.
 
