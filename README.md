@@ -37,6 +37,7 @@
 I dati sono forniti "così come sono", senza garanzie su accuratezza o disponibilità.
 ---
 
+
 ## 🛠️ Sensori disponibili
 | Sensore | Unità | Descrizione |
 |---------|-------|-------------|
