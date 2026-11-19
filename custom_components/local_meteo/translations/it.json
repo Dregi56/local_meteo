@@ -3,11 +3,9 @@
     "step": {
       "user": {
         "title": "Local Meteo",
-        "description": "Inserisci il nome della città, oppure lascialo vuoto e indica le coordinate.",
+        "description": "Inserisci il nome di una città o di un paese. Se lasci vuoto verrà usata la posizione di casa di Home Assistant ({lat}, {lon}).\n\nDati: Open-Meteo.com (CC BY 4.0) e ARPAV.",
         "data": {
-          "city": "Città / Paese",
-          "latitude": "Latitudine",
-          "longitude": "Longitudine"
+          "city": "Città / Paese"
         }
       },
       "select": {
@@ -15,13 +13,46 @@
         "data": {
           "location": "Località"
         }
+      },
+      "station": {
+        "title": "Stazione meteo ARPAV",
+        "description": "Scegli la stazione da cui leggere i dati locali. Sono ordinate per distanza dalla località scelta. «Automatica» usa la più vicina.",
+        "data": {
+          "station": "Stazione"
+        }
       }
     },
     "error": {
       "city_not_found": "Nessuna località trovata con questo nome",
-      "cannot_connect": "Impossibile contattare il servizio di geocoding",
-      "invalid_coordinates": "Coordinate non valide",
-      "city_or_coordinates": "Inserisci una città oppure latitudine e longitudine"
+      "cannot_connect": "Impossibile contattare il servizio di geocoding"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cambia località",
+        "description": "Inserisci una nuova città o paese. Se lasci vuoto verrà usata la posizione di casa di Home Assistant ({lat}, {lon}).\n\nDati: Open-Meteo.com (CC BY 4.0) e ARPAV.",
+        "data": {
+          "city": "Città / Paese"
+        }
+      },
+      "select": {
+        "title": "Scegli la località",
+        "data": {
+          "location": "Località"
+        }
+      },
+      "station": {
+        "title": "Stazione meteo ARPAV",
+        "description": "Scegli la stazione da cui leggere i dati locali. Sono ordinate per distanza dalla località scelta. «Automatica» usa la più vicina.",
+        "data": {
+          "station": "Stazione"
+        }
+      }
+    },
+    "error": {
+      "city_not_found": "Nessuna località trovata con questo nome",
+      "cannot_connect": "Impossibile contattare il servizio di geocoding"
     }
   }
 }
