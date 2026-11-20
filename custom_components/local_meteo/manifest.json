@@ -5,7 +5,7 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Dregi56/Local_Meteo",
-  "iot_class": "cloud_poll",
+  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Dregi56/Local_Meteo/issues",
   "requirements": [],
   "version": "1.1.0"
