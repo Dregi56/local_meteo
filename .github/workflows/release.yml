@@ -1,0 +1,29 @@
+name: Release assets
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Allinea la versione del manifest al tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG#v}"
+          F=custom_components/local_meteo/manifest.json
+          jq --arg v "$VERSION" '.version = $v' "$F" > manifest.tmp
+          mv manifest.tmp "$F"
+
+      - name: Crea local_meteo.zip
+        run: |
+          cd custom_components/local_meteo
+          zip -r ../../local_meteo.zip . -x "*.pyc" "__pycache__/*"
