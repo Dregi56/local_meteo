@@ -27,3 +27,9 @@ jobs:
         run: |
           cd custom_components/local_meteo
           zip -r ../../local_meteo.zip . -x "*.pyc" "__pycache__/*"
+
+      - name: Carica local_meteo.zip nella release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" local_meteo.zip --clobber
